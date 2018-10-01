@@ -1,0 +1,17 @@
+module frequency_divider (
+    input clk,  // clock
+    input rst,  // reset
+    output tick
+  ) {
+  
+  dff ctr[26](.clk(clk), .rst(rst));
+  
+  always {
+      tick = ctr.q[25];
+      
+      ctr.d = ctr.q + 1;
+    if (ctr.q[25] == 1) {
+        ctr.d[25] = 0;
+    }
+  }
+}

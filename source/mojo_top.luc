@@ -1,3 +1,5 @@
+//this file defines a finite state machine to operate auto test on the full adder.
+//it also define mothods for manually test
 module mojo_top (
     input clk,              // 50MHz clock
     input rst_n,            // reset button (active low)
@@ -11,108 +13,323 @@ module mojo_top (
     input avr_tx,           // AVR TX (FPGA RX)
     output avr_rx,          // AVR RX (FPGA TX)
     input avr_rx_busy,      // AVR RX buffer full
+    
     output io_led [3][8],   // LEDs on IO Shield
     output io_seg [8],      // 7-segment LEDs on IO Shield
     output io_sel [4],      // Digit select on IO Shield
     input io_button [5],    // 5 buttons on IO Shield
     input io_dip [3][8],     // DIP switches on IO Shield
-    output abc[3], // abc for input to adder
-    input cs[2] // sum & carry
-  ) {
-  
+    
+    // Inputs and outputs are defined here. Outputs: a, b, and cin. Inputs: sum and cout.
+    // the corresponding pins are defined in the user constraints file custom.ucf
+    output a,
+    output b,
+    output cin,
+    input sum,
+    input cout
+    
+  ) { 
+   
   sig rst;                  // reset signal
-  sig startwait;
   
   .clk(clk) {
     // The reset conditioner is used to synchronize the reset signal to the FPGA
     // clock. This ensures the entire FPGA comes out of reset at the same time.
     reset_conditioner reset_cond;
     
-    .rst(rst){
-      dff testingvalue[$clog2(8)]; // Value to test 0-7. 3bits.
-      dff testresult[8]; // Connected to LED, is on when result is correct.
-      fsm controller(#INIT(INIT)) = {INIT, WAIT, ACTIVE, HALT};
-      display myDisplay;
-      fsm displayState = {IDLE, PASS,FAIL};
+    //define a finite state machine (FSM) with 11 states,
+    //one idle state, eight different test states, a fail and a success state
+    fsm state = {IDLE, TEST1, TEST2, TEST3, TEST4, TEST5, TEST6, TEST7, TEST8, FAIL, SUCCESS};
+    
+    .rst(rst) {
+      multi_seven_seg seg;
+      frequency_divider freq;
     }
-    dff count[$clog2(2)];
-    delay_step1 step(.rst(startwait)); // Issue this is not connected to rst. May be out of sync
   }
   
   always {
-    reset_cond.in = ~rst_n; // input raw inverted reset signal
-    rst = reset_cond.out;   // conditioned reset
-    
-    led = 8h00;             // turn LEDs off
-    spi_miso = bz;          // not using SPI
-    spi_channel = bzzzz;    // not using flags
-    avr_rx = bz;            // not using serial port
-    
-    io_led = 3x{{8h00}};    // turn LEDs off
-    io_seg = 8hff;          // turn segments off
-    io_sel = 4hf;           // select no digits
-    
-    startwait = 1b0;
-    abc = testingvalue.q; // test value (output to adder)
-    
-    // The check is always running
-    
-    io_led[2][7:6] = cs; //sum=6, carry=7, actual result
-    io_led[2][1:0] = testingvalue.q[0]+testingvalue.q[1]+testingvalue.q[2]; //Expected result
-    io_led[1] = testingvalue.q;  // test value (output to adder)
-    
-    if (cs == (testingvalue.q[0]+testingvalue.q[1]+testingvalue.q[2])){
-      testresult.d[testingvalue.q] = 1b1;
-    }
-      
-    case(controller.q){
-      controller.INIT:
-        startwait = 1b1; // resets the step.
-        controller.d = controller.WAIT;
-      controller.WAIT: // If in wait mode, wait for the step delay, then go to next check.
-        if (step.out){
-          controller.d = controller.ACTIVE;
-        }
-      controller.ACTIVE:
-        if (testingvalue.q == 7){
-          controller.d = controller.HALT;
-        } else {
-          testingvalue.d = testingvalue.q + 1; 
-          startwait = 1b1; // resets the step.
-          controller.d = controller.WAIT;
-        }
-    }
-    
-    //show results
-    io_led[0][7:0] = testresult.q;
-    
-   
-   case (state.q) {
-    state.IDLE:
-    count.d = 0;
-    if ()
-      state.d = state.PASS;
- 
-    state.FAIL:
-    if () {
-      count.d = count.q + 1;
 
-      if (count.q == NUM_LETTERS - 1)
-        state.d = state.IDLE;
-    }
+    reset_cond.in = ~rst_n;   // input raw inverted reset signal
+    rst = reset_cond.out;     // conditioned reset
     
-    state.PASS:
-    if () {
-      count.d = count.q + 1;
+    led = c{3b0, io_button};  // connect buttons to LEDs
+    spi_miso = bz;            // not using SPI
+    spi_channel = bzzzz;      // not using flags
+    avr_rx = bz;              // not using serial port
+    
+    // the segments will display "0000" by default
+    seg.values = {5d0, 5d0, 5d0, 5d0};
+    
+    io_seg = ~seg.seg; // connect segments to the driver
+    io_sel = ~seg.sel; // connect digit select to the driver
+    
+    //connect the switches to led to verify if it is on/off for trouble shooting
+    //the 8 leds on the right are connected to the right 8 switches,
+    //the 8 leds on the left and 8 leds at center are turned off by default
+    io_led = {8h00,c{6x{0}, cout, sum}, c{io_dip[0][7], 4x{0}, io_dip[0][0+:3]}};
+    
+    //connect the value of a, b, cin to the right most three switches for manual testing
+    a = io_dip[0][0];
+    b = io_dip[0][1];
+    cin = io_dip[0][2];
+    
+    //when the 8th switch is turned on, the mojo will enter manual test mode.
+    //The code below defines different test cases for manual tests.
+    if (io_dip[0][7] == 1){
+      if ((io_dip[0][0] == 0 & io_dip[0][1] == 0 & io_dip[0][2] == 0)&(sum == 0 & cout == 0)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};//display "PASS"
+      }else if ((io_dip[0][0] == 0 & io_dip[0][1] == 0 & io_dip[0][2] == 1)&(sum == 1 & cout == 0)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else if ((io_dip[0][0] == 0 & io_dip[0][1] == 1 & io_dip[0][2] == 0)&(sum == 1 & cout == 0)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else if ((io_dip[0][0] == 0 & io_dip[0][1] == 1 & io_dip[0][2] == 1)&(sum == 0 & cout == 1)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else if ((io_dip[0][0] == 1 & io_dip[0][1] == 0 & io_dip[0][2] == 0)&(sum == 1 & cout == 0)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else if ((io_dip[0][0] == 1 & io_dip[0][1] == 0 & io_dip[0][2] == 1)&(sum == 0 & cout == 1)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else if ((io_dip[0][0] == 1 & io_dip[0][1] == 1 & io_dip[0][2] == 0)&(sum == 0 & cout == 1)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else if ((io_dip[0][0] == 1 & io_dip[0][1] == 1 & io_dip[0][2] == 1)&(sum == 1 & cout == 1)){
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+      }else {
+        seg.values = {5d10,5d11,5d12,5d13};// display "FAIL"
+      }
+    }
+
+    
+    //we use case statements to define the response for different states in the stae machine
+    case (state.q) {
+      
+      
+      // Idel state is the default state. 
+      // If the center button is pressed, the states machine begins the cycle, starting at state TEST1.
+      // Explanation of the states is included only in TEST1, as all of the states are similar.
+      
+      state.IDLE:
+      
+        if(io_button[1]) {
+          state.d = state.TEST1;
+        }
+      
+      // TEST ONE: 000
+      state.TEST1:
+      
+        a = 0;
+        b = 0;
+        cin = 0;
+        
+        // We write to the left most 8 leds to show which test state is currently active.
+        io_led[2][7] = 1;
+        
+        // The last three digits of the display will show the input values of a, b and cin for full adder respectively.
+        seg.values = {5d0, 5d0, 5d0, 5d0};
+        
+        // Check if the outputs of the full-adder s, cout are correct. 
+        //If it is correct go to the next test case(nest state), if not, go to fail state
+        
+        if (sum == 0 && cout == 0 && freq.tick == 1) {
+          state.d = state.TEST2;
+        }
+
+        
+        else if (sum != 0 || cout != 0 && freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        // Pressing reset button will reset the state to default state(idle state)
+        
+        if (rst_n == 0) {
+          state.d = state.IDLE;
+        }
+
+   
+      // TEST TWO: 001
+      state.TEST2:
+        a = 0;
+        b = 0;
+        cin = 1;
+        
+        io_led[2][6] = 1;
+        seg.values = {5d0, 5d0, 5d0, 5d1};
+
+        
+        if (sum == 1 & cout == 0 & freq.tick == 1) {
+          state.d = state.TEST3;
+        }
+        
+        else if ((sum != 1 | cout != 0) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+      // TEST THREE: 010
+      state.TEST3:
+        a = 0;
+        b = 1;
+        cin = 0;
+        
+        io_led[2][5] = 1;
+        seg.values = {5d0, 5d0, 5d1, 5d0};
+        
+        if (sum == 1 & cout == 0 & freq.tick == 1) {
+          state.d = state.TEST4;
+        }
+         
+        else if ((sum != 1 | cout != 0) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+      // TEST FOUR: 011 
+      state.TEST4:
+        a = 0;
+        b = 1;
+        cin = 1;
+        
+        io_led[2][4] = 1;
+        seg.values = {5d0, 5d0, 5d1, 5d1};
+        
+        if (sum == 0 & cout == 1 & freq.tick == 1) {
+          state.d = state.TEST5;
+        }
+         
+        else if ((sum != 0 | cout != 1) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
      
-      if (count.q == NUM_LETTERS - 1)
-        state.d = state.FAIL;
+      // TEST FIVE: 100
+      state.TEST5:
+        a = 1;
+        b = 0;
+        cin = 0;
+        
+        io_led[2][3] = 1;
+        seg.values = {5d0, 5d1, 5d0, 5d0};
+        
+        if (sum == 1 & cout == 0 & freq.tick == 1) {
+          state.d = state.TEST6;
+        }
+         
+        else if ((sum != 1 | cout != 0) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+        
+      // TEST SIX: 101
+      state.TEST6:
+        a = 1;
+        b = 0;
+        cin = 1;
+        
+        io_led[2][2] = 1;
+        seg.values = {5d0, 5d1, 5d0, 5d1};
+        
+        if (sum == 0 & cout == 1 & freq.tick == 1) {
+          state.d = state.TEST7;
+        }
+         
+        else if ((sum != 0 | cout != 1) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+      // TEST SEVEN: 110
+      state.TEST7:
+        a = 1;
+        b = 1;
+        cin = 0;
+        
+        io_led[2][1] = 1;
+        seg.values = {5d0, 5d1, 5d1, 5d0};
+        
+        if (sum == 0 & cout == 1 & freq.tick == 1) {
+          state.d = state.TEST8;
+        }
+         
+        else if ((sum != 0 | cout != 1) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+      // TEST EIGHT: 111
+      state.TEST8:
+        a = 1;
+        b = 1;
+        cin = 1;
+        
+        io_led[2][0] = 1;
+        seg.values = {5d0, 5d1, 5d1, 5d1};
+        
+        if (sum == 1 & cout == 1 & freq.tick == 1) {
+          state.d = state.SUCCESS;
+        }
+         
+        else if ((sum != 1 | cout != 1) & freq.tick == 1) {
+          state.d = state.FAIL;
+        }
+        
+        if(rst_n == 0) {
+          state.d = state.IDLE;
+        }
+      
+      // The fail state indicates that the outputs of the full adder is wrong.      
+      state.FAIL:
+        
+        //Display the letters "FAIL"
+        seg.values = {5d10, 5d11, 5d12, 5d13};
+        
+        // Pressing reset button will reset the state to default state(idle state)
+        if (rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+        if(io_button[1]) {
+          state.d = state.TEST1;
+        }
+        
+        if(io_button[2]) {
+          state.d = state.IDLE;
+        }
+      
+      // The state SUCCESS indicates that all eight tests have been passed, 
+      //and the sums and couts of all the tests are verified correct.
+      state.SUCCESS:
+      
+        //Display the letters 'PASS'
+        seg.values = {5d14, 5d11, 5d5, 5d5};
+        
+        if (rst_n == 0) {
+          state.d = state.IDLE;
+        }
+        
+        if(io_button[1]) {
+          state.d = state.TEST1;
+        }
+        
+        if(io_button[2]) {
+          state.d = state.IDLE;
+        }
+      }
     }
-}
-}
-  
-    
-    
-    
-  }
 }

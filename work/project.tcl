@@ -1,13 +1,13 @@
-set projDir "C:/Users/Lenovo/Desktop/50.002-master/Adder tester/work/planAhead"
-set projName "Adder tester"
+set projDir "G:/Github/Mojo/Full_Adder_Tester/work/planAhead"
+set projName "Full_Adder_Tester"
 set topName top
 set device xc6slx9-2tqg144
 if {[file exists "$projDir/$projName"]} { file delete -force "$projDir/$projName" }
 create_project $projName "$projDir/$projName" -part $device
 set_property design_mode RTL [get_filesets sources_1]
-set verilogSources [list "C:/Users/Lenovo/Desktop/50.002-master/Adder tester/work/verilog/mojo_top_0.v" "C:/Users/Lenovo/Desktop/50.002-master/Adder tester/work/verilog/reset_conditioner_1.v" "C:/Users/Lenovo/Desktop/50.002-master/Adder tester/work/verilog/display_2.v" "C:/Users/Lenovo/Desktop/50.002-master/Adder tester/work/verilog/delay_step1_3.v"]
+set verilogSources [list "G:/Github/Mojo/Full_Adder_Tester/work/verilog/mojo_top_0.v" "G:/Github/Mojo/Full_Adder_Tester/work/verilog/reset_conditioner_1.v" "G:/Github/Mojo/Full_Adder_Tester/work/verilog/multi_seven_seg_2.v" "G:/Github/Mojo/Full_Adder_Tester/work/verilog/frequency_divider_3.v" "G:/Github/Mojo/Full_Adder_Tester/work/verilog/counter_4.v" "G:/Github/Mojo/Full_Adder_Tester/work/verilog/seven_seg_5.v" "G:/Github/Mojo/Full_Adder_Tester/work/verilog/decoder_6.v"]
 import_files -fileset [get_filesets sources_1] -force -norecurse $verilogSources
-set ucfSources [list "C:/Users/Lenovo/Desktop/50.002-master/Adder\ tester/constraint/custom.ucf" "C:/Program\ Files/Mojo\ IDE/library/components/io_shield.ucf" "C:/Program\ Files/Mojo\ IDE/library/components/mojo.ucf"]
+set ucfSources [list "G:/Github/Mojo/Full_Adder_Tester/constraint/custom.ucf" "C:/Program\ Files/Mojo\ IDE/library/components/io_shield.ucf" "C:/Program\ Files/Mojo\ IDE/library/components/mojo.ucf"]
 import_files -fileset [get_filesets constrs_1] -force -norecurse $ucfSources
 set_property -name {steps.bitgen.args.More Options} -value {-g Binary:Yes -g Compress} -objects [get_runs impl_1]
 set_property steps.map.args.mt on [get_runs impl_1]

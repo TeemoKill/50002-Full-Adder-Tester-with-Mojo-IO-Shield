@@ -1,0 +1,8 @@
+INTSTYLE=pa
+INFILE=G:\Github\Mojo\Full_Adder_Tester\work\planAhead\Full_Adder_Tester\Full_Adder_Tester.runs\impl_1\mojo_top_0_routed.ncd
+OUTFILE=G:\Github\Mojo\Full_Adder_Tester\work\planAhead\Full_Adder_Tester\Full_Adder_Tester.runs\impl_1\mojo_top_0.bit
+FAMILY=Spartan6
+PART=xc6slx9-2tqg144
+WORKINGDIR=G:\Github\Mojo\Full_Adder_Tester\work\planAhead\Full_Adder_Tester\Full_Adder_Tester.runs\impl_1
+LICENSE=WebPack
+USER_INFO=211600040_0_0_736

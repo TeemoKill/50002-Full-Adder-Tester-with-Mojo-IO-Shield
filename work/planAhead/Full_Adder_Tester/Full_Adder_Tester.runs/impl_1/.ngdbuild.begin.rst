@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<ProcessHandle Version="1" Minor="0">
+    <Process Command="ngdbuild" Owner="11588" Host="TEEMOKILL" Pid="12964">
+    </Process>
+</ProcessHandle>
