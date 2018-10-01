@@ -1,0 +1,15 @@
+# Inputs
+NET "cs[0]" LOC = P41;
+NET "cs[0]" IOSTANDARD = LVTTL;
+NET "cs[0]" PULLDOWN;
+NET "cs[1]" LOC = P51;
+NET "cs[1]" IOSTANDARD = LVTTL;
+NET "cs[1]" PULLDOWN;
+
+# Outputs
+NET "abc[0]" LOC = P111;
+NET "abc[0]" IOSTANDARD = LVTTL;
+NET "abc[1]" LOC = P114;
+NET "abc[1]" IOSTANDARD = LVTTL;
+NET "abc[2]" LOC = P116;
+NET "abc[2]" IOSTANDARD = LVTTL;

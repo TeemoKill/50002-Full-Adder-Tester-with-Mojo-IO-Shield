@@ -1,0 +1,13 @@
+module cycle ( // 2^25 / 50,000,000 period, 0.671s
+    input clk,  // clock
+    input rst,  // reset
+    output out
+  ) {
+
+  dff counter[25](.clk(clk), .rst(rst));
+ 
+  always {
+    out = counter.q[24];
+    counter.d = counter.q + 1;
+  }
+}

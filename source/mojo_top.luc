@@ -10,15 +10,33 @@ module mojo_top (
     output spi_channel [4], // AVR general purpose pins (used by default to select ADC channel)
     input avr_tx,           // AVR TX (FPGA RX)
     output avr_rx,          // AVR RX (FPGA TX)
-    input avr_rx_busy       // AVR RX buffer full
+    input avr_rx_busy,      // AVR RX buffer full
+    output io_led [3][8],   // LEDs on IO Shield
+    output io_seg [8],      // 7-segment LEDs on IO Shield
+    output io_sel [4],      // Digit select on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    input io_dip [3][8],     // DIP switches on IO Shield
+    output abc[3], // abc for input to adder
+    input cs[2] // sum & carry
   ) {
   
   sig rst;                  // reset signal
+  sig startwait;
   
   .clk(clk) {
     // The reset conditioner is used to synchronize the reset signal to the FPGA
     // clock. This ensures the entire FPGA comes out of reset at the same time.
     reset_conditioner reset_cond;
+    
+    .rst(rst){
+      dff testingvalue[$clog2(8)]; // Value to test 0-7. 3bits.
+      dff testresult[8]; // Connected to LED, is on when result is correct.
+      fsm controller(#INIT(INIT)) = {INIT, WAIT, ACTIVE, HALT};
+      display myDisplay;
+      fsm displayState = {IDLE, PASS,FAIL};
+    }
+    dff count[$clog2(2)];
+    delay_step1 step(.rst(startwait)); // Issue this is not connected to rst. May be out of sync
   }
   
   always {
@@ -29,5 +47,72 @@ module mojo_top (
     spi_miso = bz;          // not using SPI
     spi_channel = bzzzz;    // not using flags
     avr_rx = bz;            // not using serial port
+    
+    io_led = 3x{{8h00}};    // turn LEDs off
+    io_seg = 8hff;          // turn segments off
+    io_sel = 4hf;           // select no digits
+    
+    startwait = 1b0;
+    abc = testingvalue.q; // test value (output to adder)
+    
+    // The check is always running
+    
+    io_led[2][7:6] = cs; //sum=6, carry=7, actual result
+    io_led[2][1:0] = testingvalue.q[0]+testingvalue.q[1]+testingvalue.q[2]; //Expected result
+    io_led[1] = testingvalue.q;  // test value (output to adder)
+    
+    if (cs == (testingvalue.q[0]+testingvalue.q[1]+testingvalue.q[2])){
+      testresult.d[testingvalue.q] = 1b1;
+    }
+      
+    case(controller.q){
+      controller.INIT:
+        startwait = 1b1; // resets the step.
+        controller.d = controller.WAIT;
+      controller.WAIT: // If in wait mode, wait for the step delay, then go to next check.
+        if (step.out){
+          controller.d = controller.ACTIVE;
+        }
+      controller.ACTIVE:
+        if (testingvalue.q == 7){
+          controller.d = controller.HALT;
+        } else {
+          testingvalue.d = testingvalue.q + 1; 
+          startwait = 1b1; // resets the step.
+          controller.d = controller.WAIT;
+        }
+    }
+    
+    //show results
+    io_led[0][7:0] = testresult.q;
+    
+   
+   case (state.q) {
+    state.IDLE:
+    count.d = 0;
+    if ()
+      state.d = state.PASS;
+ 
+    state.FAIL:
+    if () {
+      count.d = count.q + 1;
+
+      if (count.q == NUM_LETTERS - 1)
+        state.d = state.IDLE;
+    }
+    
+    state.PASS:
+    if () {
+      count.d = count.q + 1;
+     
+      if (count.q == NUM_LETTERS - 1)
+        state.d = state.FAIL;
+    }
+}
+}
+  
+    
+    
+    
   }
 }

@@ -1,0 +1,24 @@
+module delay_step1 ( 
+    input clk,  // clock
+    input rst,  // reset
+    output out
+  ) {
+  
+  const SIZE = 29;
+  // Delay time is (2**(SIZE-1) - INIT) /50,000,000
+  // (most significant bit will be flipped halfway through, so only SIZE-1 bits are timed)
+  dff counter[SIZE](#INIT(168435456), .clk(clk), .rst(rst)); // 2s, use 118435456 for 3s delay. 
+  dff flip(.clk(clk), .rst(rst));
+  
+  always {
+    out = 0;
+    if (counter.q[SIZE-1]){
+      out = 1;
+      flip.d = 1;
+    }
+    if (flip.q){
+      out = 1;
+    }
+    counter.d = counter.q + 1;
+  }
+}

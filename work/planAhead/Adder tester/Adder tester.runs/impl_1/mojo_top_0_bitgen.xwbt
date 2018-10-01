@@ -1,0 +1,8 @@
+INTSTYLE=pa
+INFILE=C:\Users\Lenovo\Desktop\50.002-master\Adder tester\work\planAhead\Adder tester\Adder tester.runs\impl_1\mojo_top_0_routed.ncd
+OUTFILE=C:\Users\Lenovo\Desktop\50.002-master\Adder tester\work\planAhead\Adder tester\Adder tester.runs\impl_1\mojo_top_0.bit
+FAMILY=Spartan6
+PART=xc6slx9-2tqg144
+WORKINGDIR=C:\Users\Lenovo\Desktop\50.002-master\Adder tester\work\planAhead\Adder tester\Adder tester.runs\impl_1
+LICENSE=WebPack
+USER_INFO=211592050_0_0_932
